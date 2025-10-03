@@ -46,36 +46,41 @@ func main() {
 func consumePigs(done <-chan interface{}, pigs <-chan interface{}) {
 	defer wg.Done()
 
-	for {
-		select {
-		case <-done:
-			return
-		case pig, ok := <-pigs:
-			if !ok {
-				fmt.Println(("channel closed"))
-				return
-			}
-
-			// do some complex logic
-			fmt.Println(pig)
-		}
+	for pig := range orDone(done, pigs) {
+		// do some complex logic
+		fmt.Println(pig)
 	}
 }
+
 func consumeCows(done <-chan interface{}, cows <-chan interface{}) {
 	defer wg.Done()
 
-	for {
-		select {
-		case <-done:
-			return
-		case cow, ok := <-cows:
-			if !ok {
-				fmt.Println(("channel closed"))
-				return
-			}
-
-			// do some complex logic
-			fmt.Println(cow)
-		}
+	for cow := range orDone(done, cows) {
+		// do some complex logic
+		fmt.Println(cow)
 	}
+}
+
+func orDone(done, c <-chan interface{}) <-chan interface{} {
+	relayStream := make(chan interface{})
+	go func() {
+		defer close(relayStream)
+		for {
+			select {
+			case <-done:
+				return
+			case v, ok := <-c:
+				if !ok {
+					return
+				}
+				select {
+				case relayStream <- v:
+				case <-done:
+					return
+				}
+			}
+		}
+	}()
+
+	return relayStream
 }
