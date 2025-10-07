@@ -7,7 +7,7 @@ import (
 
 var wg sync.WaitGroup
 
-func main() {
+func mai6n() {
 	done := make(chan interface{})
 	defer close(done)
 
